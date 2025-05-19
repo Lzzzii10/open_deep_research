@@ -31,10 +31,10 @@ class Queries(BaseModel):
 
 class Feedback(BaseModel):
     grade: Literal["pass","fail"] = Field(
-        description="Evaluation result indicating whether the response meets requirements ('pass') or needs revision ('fail')."
+        description="评估结果，'pass' 表示内容合格，'fail' 表示需要补充或修订。"
     )
     follow_up_queries: List[SearchQuery] = Field(
-        description="List of follow-up search queries.",
+        description="后续检索查询列表，用于补充缺失信息。",
     )
 
 class ReportStateInput(TypedDict):
@@ -44,12 +44,12 @@ class ReportStateOutput(TypedDict):
     final_report: str # Final report
 
 class ReportState(TypedDict):
-    topic: str # Report topic    
-    feedback_on_report_plan: str # Feedback on the report plan
-    sections: list[Section] # List of report sections 
-    completed_sections: Annotated[list, operator.add] # Send() API key
-    report_sections_from_research: str # String of any completed sections from research to write final sections
-    final_report: str # Final report
+    topic: str # 报告主题
+    feedback_on_report_plan: str # 针对报告计划的反馈
+    sections: list[Section] # 报告各部分的列表
+    completed_sections: Annotated[list, operator.add] # Send() API 键
+    report_sections_from_research: str # 由研究完成的部分内容字符串，用于撰写最终部分
+    final_report: str # 最终报告
 
 class SectionState(TypedDict):
     topic: str # Report topic

@@ -7,17 +7,17 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
 from dataclasses import dataclass
 
-DEFAULT_REPORT_STRUCTURE = """Use this structure to create a report on the user-provided topic:
+DEFAULT_REPORT_STRUCTURE = """请使用以下结构为用户提供的主题撰写报告：
 
-1. Introduction (no research needed)
-   - Brief overview of the topic area
+1. 引言（无需检索）
+   - 简要介绍该主题领域
 
-2. Main Body Sections:
-   - Each section should focus on a sub-topic of the user-provided topic
-   
-3. Conclusion
-   - Aim for 1 structural element (either a list of table) that distills the main body sections 
-   - Provide a concise summary of the report"""
+2. 主体部分：
+   - 每个小节聚焦于主题的一个子话题
+
+3. 结论
+   - 尽量用一个结构化元素（如列表或表格）提炼主体部分的要点
+   - 对报告内容进行简明扼要的总结"""
 
 class SearchAPI(Enum):
     PERPLEXITY = "perplexity"
@@ -31,27 +31,29 @@ class SearchAPI(Enum):
 
 @dataclass(kw_only=True)
 class Configuration:
-    """The configurable fields for the chatbot."""
-    # Common configuration
-    report_structure: str = DEFAULT_REPORT_STRUCTURE # Defaults to the default report structure
-    search_api: SearchAPI = SearchAPI.TAVILY # Default to TAVILY
-    search_api_config: Optional[Dict[str, Any]] = None
-    
-    # Graph-specific configuration
-    number_of_queries: int = 2 # Number of search queries to generate per iteration
-    max_search_depth: int = 2 # Maximum number of reflection + search iterations
-    planner_provider: str = "anthropic"  # Defaults to Anthropic as provider
-    planner_model: str = "claude-3-7-sonnet-latest" # Defaults to claude-3-7-sonnet-latest
-    planner_model_kwargs: Optional[Dict[str, Any]] = None # kwargs for planner_model
-    writer_provider: str = "anthropic" # Defaults to Anthropic as provider
-    writer_model: str = "claude-3-5-sonnet-latest" # Defaults to claude-3-5-sonnet-latest
-    writer_model_kwargs: Optional[Dict[str, Any]] = None # kwargs for writer_model
-    search_api: SearchAPI = SearchAPI.TAVILY # Default to TAVILY
-    search_api_config: Optional[Dict[str, Any]] = None 
-    
-    # Multi-agent specific configuration
-    supervisor_model: str = "openai:gpt-4.1" # Model for supervisor agent in multi-agent setup
-    researcher_model: str = "openai:gpt-4.1" # Model for research agents in multi-agent setup 
+    """聊天机器人可配置的字段。"""
+    # 通用配置
+    report_structure: str = DEFAULT_REPORT_STRUCTURE # 默认为默认报告结构
+    search_api: SearchAPI = SearchAPI.TAVILY # 默认为 TAVILY
+    search_api_config: Optional[Dict[str, Any]] = None # 搜索 API 的配置参数
+
+    # 图相关配置
+    number_of_queries: int = 4 # 每次迭代生成的搜索查询数量
+    max_search_depth: int = 2 # 最大反思+搜索迭代次数
+    planner_provider: str = "openai"  # 规划模型的提供商，默认为 Anthropic
+    planner_model: str = "qwen2.5_72b_instruct-gptq-int4" # 规划模型，默认为 claude-3-7-sonnet-latest
+    planner_model_kwargs: Optional[Dict[str, Any]] = None # 规划模型的额外参数
+    planer_model_base_url = "http://172.17.3.88:8021/v1"
+    writer_provider: str = "openai" # 撰写模型的提供商，默认为 Anthropic
+    writer_model: str = "qwen2.5_72b_instruct-gptq-int4" # 撰写模型，默认为 claude-3-5-sonnet-latest
+    writer_model_kwargs: Optional[Dict[str, Any]] = None # 撰写模型的额外参数
+    writer_model_base_url = "http://172.17.3.88:8021/v1"
+    search_api: SearchAPI = SearchAPI.TAVILY # 默认为 TAVILY
+    search_api_config: Optional[Dict[str, Any]] = None # 搜索 API 的配置参数
+
+    # 多智能体相关配置
+    supervisor_model: str = "openai:gpt-4.1" # 多智能体设置中主管代理的模型
+    researcher_model: str = "openai:gpt-4.1" # 多智能体设置中研究代理的模型
 
     @classmethod
     def from_runnable_config(

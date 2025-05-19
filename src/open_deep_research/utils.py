@@ -1305,18 +1305,18 @@ async def tavily_search(queries: List[str]) -> str:
         return "No valid search results found. Please try different search queries or use a different search API."
 
 async def select_and_execute_search(search_api: str, query_list: list[str], params_to_pass: dict) -> str:
-    """Select and execute the appropriate search API.
+    """选择并执行合适的搜索 API。
     
-    Args:
-        search_api: Name of the search API to use
-        query_list: List of search queries to execute
-        params_to_pass: Parameters to pass to the search API
+    参数:
+        search_api: 要使用的搜索 API 名称
+        query_list: 要执行的搜索查询列表
+        params_to_pass: 传递给搜索 API 的参数
         
-    Returns:
-        Formatted string containing search results
+    返回:
+        包含搜索结果的格式化字符串
         
-    Raises:
-        ValueError: If an unsupported search API is specified
+    异常:
+        ValueError: 如果指定了不支持的搜索 API
     """
     if search_api == "tavily":
         # Tavily search tool used with both workflow and agent 

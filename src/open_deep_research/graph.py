@@ -40,20 +40,20 @@ from open_deep_research.utils import (
 ## Nodes -- 
 
 async def generate_report_plan(state: ReportState, config: RunnableConfig):
-    """Generate the initial report plan with sections.
-    
-    This node:
-    1. Gets configuration for the report structure and search parameters
-    2. Generates search queries to gather context for planning
-    3. Performs web searches using those queries
-    4. Uses an LLM to generate a structured plan with sections
-    
-    Args:
-        state: Current graph state containing the report topic
-        config: Configuration for models, search APIs, etc.
-        
-    Returns:
-        Dict containing the generated sections
+    """生成初始报告计划及其各个部分。
+
+    此节点功能：
+    1. 获取报告结构和搜索参数的配置信息
+    2. 生成用于规划的搜索查询
+    3. 使用这些查询进行网络搜索
+    4. 利用大语言模型（LLM）生成包含各部分的结构化报告计划
+
+    参数说明：
+        state: 当前图状态，包含报告主题
+        config: 用于模型、搜索API等的配置信息
+
+    返回值：
+        包含生成的各个部分的字典
     """
 
     # Inputs
@@ -65,10 +65,11 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
     report_structure = configurable.report_structure
     number_of_queries = configurable.number_of_queries
     search_api = get_config_value(configurable.search_api)
-    search_api_config = configurable.search_api_config or {}  # Get the config dict, default to empty
+    search_api_config = configurable.search_api_config or { "max_results": 1 }  # Get the config dict, default to empty
     params_to_pass = get_search_params(search_api, search_api_config)  # Filter parameters
 
-    # Convert JSON object to string if necessary
+    # 如果 report_structure 是一个字典（dict），就将其转换为字符串。
+    # 这样做通常是为了后续格式化字符串或传递给只接受字符串参数的函数，避免类型错误。
     if isinstance(report_structure, dict):
         report_structure = str(report_structure)
 
@@ -76,7 +77,9 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
-    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
+    writer_model_base_url = get_config_value(configurable.writer_model_base_url)
+
+    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs,base_url=writer_model_base_url) 
     structured_llm = writer_model.with_structured_output(Queries)
 
     # Format system instructions
@@ -84,7 +87,7 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
 
     # Generate queries  
     results = await structured_llm.ainvoke([SystemMessage(content=system_instructions_query),
-                                     HumanMessage(content="Generate search queries that will help with planning the sections of the report.")])
+                                     HumanMessage(content="生成有助于规划报告各部分的网页搜索查询。")])
 
     # Web search
     query_list = [query.search_query for query in results.queries]
@@ -99,25 +102,18 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
     planner_provider = get_config_value(configurable.planner_provider)
     planner_model = get_config_value(configurable.planner_model)
     planner_model_kwargs = get_config_value(configurable.planner_model_kwargs or {})
+    planer_model_base_url = get_config_value(configurable.planer_model_base_url)
 
-    # Report planner instructions
-    planner_message = """Generate the sections of the report. Your response must include a 'sections' field containing a list of sections. 
-                        Each section must have: name, description, plan, research, and content fields."""
+    # Report planner instructions（中文提示词）
+    planner_message = """请生成报告的各个部分。你的回复必须包含一个 'sections' 字段，其值为各部分的列表。
+每个部分必须包含以下字段: name(名称)、description(描述)、plan(规划/计划)、research(是否需要检索)、content(内容)。"""
 
-    # Run the planner
-    if planner_model == "claude-3-7-sonnet-latest":
-        # Allocate a thinking budget for claude-3-7-sonnet-latest as the planner model
-        planner_llm = init_chat_model(model=planner_model, 
-                                      model_provider=planner_provider, 
-                                      max_tokens=20_000, 
-                                      thinking={"type": "enabled", "budget_tokens": 16_000})
+   
+    planner_llm = init_chat_model(model=planner_model, 
+                                    model_provider=planner_provider,
+                                    model_kwargs=planner_model_kwargs,
+                                    base_url = planer_model_base_url)
 
-    else:
-        # With other models, thinking tokens are not specifically allocated
-        planner_llm = init_chat_model(model=planner_model, 
-                                      model_provider=planner_provider,
-                                      model_kwargs=planner_model_kwargs)
-    
     # Generate the report sections
     structured_llm = planner_llm.with_structured_output(Sections)
     report_sections = await structured_llm.ainvoke([SystemMessage(content=system_instructions_sections),
@@ -129,42 +125,42 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
     return {"sections": sections}
 
 def human_feedback(state: ReportState, config: RunnableConfig) -> Command[Literal["generate_report_plan","build_section_with_web_research"]]:
-    """Get human feedback on the report plan and route to next steps.
+    """获取用户对报告计划的反馈并确定下一步操作。
     
-    This node:
-    1. Formats the current report plan for human review
-    2. Gets feedback via an interrupt
-    3. Routes to either:
-       - Section writing if plan is approved
-       - Plan regeneration if feedback is provided
+    此节点功能：
+    1. 格式化当前报告计划以供用户审阅
+    2. 通过中断获取用户反馈
+    3. 根据反馈进行路由：
+       - 如果计划获得批准，则开始撰写章节
+       - 如果收到反馈意见，则重新生成计划
     
-    Args:
-        state: Current graph state with sections to review
-        config: Configuration for the workflow
+    参数：
+        state: 包含待审阅章节的当前图状态
+        config: 工作流配置
         
-    Returns:
-        Command to either regenerate plan or start section writing
+    返回：
+        重新生成计划或开始章节撰写的命令
     """
 
     # Get sections
     topic = state["topic"]
     sections = state['sections']
     sections_str = "\n\n".join(
-        f"Section: {section.name}\n"
-        f"Description: {section.description}\n"
-        f"Research needed: {'Yes' if section.research else 'No'}\n"
+        f"章节: {section.name}\n"
+        f"描述: {section.description}\n"
+        f"是否需要研究: {'是' if section.research else '否'}\n"
         for section in sections
     )
 
     # Get feedback on the report plan from interrupt
-    interrupt_message = f"""Please provide feedback on the following report plan. 
+    interrupt_message = f"""请对以下报告计划提供反馈。
                         \n\n{sections_str}\n
-                        \nDoes the report plan meet your needs?\nPass 'true' to approve the report plan.\nOr, provide feedback to regenerate the report plan:"""
+                        \n这个报告计划是否符合您的需求？\n输入 'true' 表示批准报告计划。\n或者，提供反馈以重新生成报告计划："""
     
     feedback = interrupt(interrupt_message)
-
+    feedback = feedback.get("feedback")
     # If the user approves the report plan, kick off section writing
-    if isinstance(feedback, bool) and feedback is True:
+    if  feedback == "正确":
         # Treat this as approve and kick off section writing
         return Command(goto=[
             Send("build_section_with_web_research", {"topic": topic, "section": s, "search_iterations": 0}) 
@@ -181,17 +177,16 @@ def human_feedback(state: ReportState, config: RunnableConfig) -> Command[Litera
         raise TypeError(f"Interrupt value of type {type(feedback)} is not supported.")
     
 async def generate_queries(state: SectionState, config: RunnableConfig):
-    """Generate search queries for researching a specific section.
-    
-    This node uses an LLM to generate targeted search queries based on the 
-    section topic and description.
-    
-    Args:
-        state: Current state containing section details
-        config: Configuration including number of queries to generate
-        
-    Returns:
-        Dict containing the generated search queries
+    """为特定章节生成检索查询。
+
+    此节点使用大语言模型（LLM）根据章节主题和描述生成有针对性的检索查询。
+
+    参数：
+        state: 包含章节详细信息的当前状态
+        config: 配置，包括要生成的查询数量
+
+    返回：
+        包含生成的检索查询的字典
     """
 
     # Get state 
@@ -216,24 +211,24 @@ async def generate_queries(state: SectionState, config: RunnableConfig):
 
     # Generate queries  
     queries = await structured_llm.ainvoke([SystemMessage(content=system_instructions),
-                                     HumanMessage(content="Generate search queries on the provided topic.")])
+                                     HumanMessage(content="生成有助于检索信息的网页搜索查询。")])
 
     return {"search_queries": queries.queries}
 
 async def search_web(state: SectionState, config: RunnableConfig):
-    """Execute web searches for the section queries.
-    
-    This node:
-    1. Takes the generated queries
-    2. Executes searches using configured search API
-    3. Formats results into usable context
-    
-    Args:
-        state: Current state with search queries
-        config: Search API configuration
-        
-    Returns:
-        Dict with search results and updated iteration count
+    """为章节查询执行网页搜索。
+
+    此节点：
+    1. 获取已生成的检索查询
+    2. 使用配置的搜索API执行检索
+    3. 将结果格式化为可用的上下文
+
+    参数：
+        state: 包含检索查询的当前状态
+        config: 搜索API的配置
+
+    返回：
+        包含搜索结果和更新后迭代次数的字典
     """
 
     # Get state
@@ -254,21 +249,21 @@ async def search_web(state: SectionState, config: RunnableConfig):
     return {"source_str": source_str, "search_iterations": state["search_iterations"] + 1}
 
 async def write_section(state: SectionState, config: RunnableConfig) -> Command[Literal[END, "search_web"]]:
-    """Write a section of the report and evaluate if more research is needed.
-    
-    This node:
-    1. Writes section content using search results
-    2. Evaluates the quality of the section
-    3. Either:
-       - Completes the section if quality passes
-       - Triggers more research if quality fails
-    
-    Args:
-        state: Current state with search results and section info
-        config: Configuration for writing and evaluation
-        
-    Returns:
-        Command to either complete section or do more research
+    """撰写报告的一个章节并评估是否需要进一步研究。
+
+    此节点功能：
+    1. 利用检索结果撰写章节内容
+    2. 评估章节质量
+    3. 根据评估结果：
+       - 若质量合格，则完成该章节
+       - 若质量不合格，则触发进一步研究
+
+    参数：
+        state: 包含检索结果和章节信息的当前状态
+        config: 撰写和评估所需的配置信息
+
+    返回：
+        指示是完成章节还是继续研究的命令
     """
 
     # Get state 
@@ -298,31 +293,23 @@ async def write_section(state: SectionState, config: RunnableConfig) -> Command[
     # Write content to the section object  
     section.content = section_content.content
 
-    # Grade prompt 
-    section_grader_message = ("Grade the report and consider follow-up questions for missing information. "
-                              "If the grade is 'pass', return empty strings for all follow-up queries. "
-                              "If the grade is 'fail', provide specific search queries to gather missing information.")
-    
-    section_grader_instructions_formatted = section_grader_instructions.format(topic=topic, 
-                                                                               section_topic=section.description,
-                                                                               section=section.content, 
-                                                                               number_of_follow_up_queries=configurable.number_of_queries)
-
     # Use planner model for reflection
     planner_provider = get_config_value(configurable.planner_provider)
     planner_model = get_config_value(configurable.planner_model)
     planner_model_kwargs = get_config_value(configurable.planner_model_kwargs or {})
 
-    if planner_model == "claude-3-7-sonnet-latest":
-        # Allocate a thinking budget for claude-3-7-sonnet-latest as the planner model
-        reflection_model = init_chat_model(model=planner_model, 
-                                           model_provider=planner_provider, 
-                                           max_tokens=20_000, 
-                                           thinking={"type": "enabled", "budget_tokens": 16_000}).with_structured_output(Feedback)
-    else:
-        reflection_model = init_chat_model(model=planner_model, 
+    # Initialize the reflection model
+    reflection_model = init_chat_model(model=planner_model, 
                                            model_provider=planner_provider, model_kwargs=planner_model_kwargs).with_structured_output(Feedback)
-    # Generate feedback
+
+    section_grader_instructions_formatted = section_grader_instructions.format(topic=topic, 
+                                                                            section_topic=section.description,
+                                                                            section=section.content, 
+                                                                            number_of_follow_up_queries=configurable.number_of_queries)
+    section_grader_message = ("评估报告并考虑缺失信息。 "
+                              "如果评分是'通过'，则返回空字符串作为所有后续查询。 "
+                              "如果评分是'失败'，则提供特定的搜索查询以收集缺失信息。")
+    
     feedback = await reflection_model.ainvoke([SystemMessage(content=section_grader_instructions_formatted),
                                         HumanMessage(content=section_grader_message)])
 
@@ -342,17 +329,16 @@ async def write_section(state: SectionState, config: RunnableConfig) -> Command[
         )
     
 async def write_final_sections(state: SectionState, config: RunnableConfig):
-    """Write sections that don't require research using completed sections as context.
-    
-    This node handles sections like conclusions or summaries that build on
-    the researched sections rather than requiring direct research.
-    
-    Args:
-        state: Current state with completed sections as context
-        config: Configuration for the writing model
-        
-    Returns:
-        Dict containing the newly written section
+    """使用已完成的章节作为上下文，撰写无需检索的章节。
+
+    此节点用于处理如结论或总结等章节，这些章节基于已研究的章节内容撰写，而不需要直接检索。
+
+    参数:
+        state: 当前状态，包含已完成章节作为上下文
+        config: 用于撰写模型的配置信息
+
+    返回:
+        包含新撰写章节的字典
     """
 
     # Get configuration
@@ -373,7 +359,7 @@ async def write_final_sections(state: SectionState, config: RunnableConfig):
     writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
     
     section_content = await writer_model.ainvoke([SystemMessage(content=system_instructions),
-                                           HumanMessage(content="Generate a report section based on the provided sources.")])
+                                           HumanMessage(content="根据提供的源内容生成一个报告章节。")])
     
     # Write content to section 
     section.content = section_content.content
@@ -382,16 +368,15 @@ async def write_final_sections(state: SectionState, config: RunnableConfig):
     return {"completed_sections": [section]}
 
 def gather_completed_sections(state: ReportState):
-    """Format completed sections as context for writing final sections.
-    
-    This node takes all completed research sections and formats them into
-    a single context string for writing summary sections.
-    
-    Args:
-        state: Current state with completed sections
-        
-    Returns:
-        Dict with formatted sections as context
+    """将已完成的章节格式化为撰写总结性章节的上下文字符串。
+
+    此节点会收集所有已完成的研究章节，并将其格式化为一个用于撰写总结或结论性章节的上下文字符串。
+
+    参数:
+        state: 当前状态，包含已完成的章节
+
+    返回:
+        包含格式化后章节内容的字典
     """
 
     # List of completed sections
@@ -403,18 +388,18 @@ def gather_completed_sections(state: ReportState):
     return {"report_sections_from_research": completed_report_sections}
 
 def compile_final_report(state: ReportState):
-    """Compile all sections into the final report.
-    
-    This node:
-    1. Gets all completed sections
-    2. Orders them according to original plan
-    3. Combines them into the final report
-    
-    Args:
-        state: Current state with all completed sections
-        
-    Returns:
-        Dict containing the complete report
+    """将所有章节汇编成最终报告。
+
+    此节点功能：
+    1. 获取所有已完成的章节
+    2. 按照原始计划顺序排序
+    3. 合并为最终报告
+
+    参数:
+        state: 包含所有已完成章节的当前状态
+
+    返回:
+        包含完整报告的字典
     """
 
     # Get sections
@@ -431,16 +416,16 @@ def compile_final_report(state: ReportState):
     return {"final_report": all_sections}
 
 def initiate_final_section_writing(state: ReportState):
-    """Create parallel tasks for writing non-research sections.
-    
-    This edge function identifies sections that don't need research and
-    creates parallel writing tasks for each one.
-    
-    Args:
-        state: Current state with all sections and research context
-        
-    Returns:
-        List of Send commands for parallel section writing
+    """为无需检索的章节创建并行写作任务。
+
+    此边缘函数会识别所有不需要检索的章节，
+    并为每个章节创建一个并行的写作任务。
+
+    参数:
+        state: 当前状态，包含所有章节及研究上下文
+
+    返回:
+        用于并行章节写作的 Send 命令列表
     """
 
     # Kick off section writing in parallel via Send() API for any sections that do not require research
@@ -481,5 +466,6 @@ builder.add_edge("build_section_with_web_research", "gather_completed_sections")
 builder.add_conditional_edges("gather_completed_sections", initiate_final_section_writing, ["write_final_sections"])
 builder.add_edge("write_final_sections", "compile_final_report")
 builder.add_edge("compile_final_report", END)
+
 
 graph = builder.compile()

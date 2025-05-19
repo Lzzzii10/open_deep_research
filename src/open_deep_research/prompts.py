@@ -1,257 +1,252 @@
-report_planner_query_writer_instructions="""You are performing research for a report. 
+report_planner_query_writer_instructions="""你正在为一份报告进行资料调研。
 
-<Report topic>
+<报告主题>
 {topic}
-</Report topic>
+</报告主题>
 
-<Report organization>
+<报告结构>
 {report_organization}
-</Report organization>
+</报告结构>
 
-<Task>
-Your goal is to generate {number_of_queries} web search queries that will help gather information for planning the report sections. 
+<任务>
+你的目标是生成 {number_of_queries} 条有助于规划报告各部分的网页搜索查询。
 
-The queries should:
+这些查询应当：
 
-1. Be related to the Report topic
-2. Help satisfy the requirements specified in the report organization
+1. 与报告主题密切相关
+2. 有助于满足报告结构中提出的要求
 
-Make the queries specific enough to find high-quality, relevant sources while covering the breadth needed for the report structure.
-</Task>
+请确保查询足够具体，能够找到高质量、相关性强的资料，同时覆盖报告结构所需的广度。
+</任务>
 
-<Format>
-Call the Queries tool 
-</Format>
+<格式>
+调用 Queries 工具
+</格式>
 """
 
-report_planner_instructions="""I want a plan for a report that is concise and focused.
+report_planner_instructions="""我需要一个简明且聚焦的报告结构规划。
 
-<Report topic>
-The topic of the report is:
+<报告主题>
+报告的主题是：
 {topic}
-</Report topic>
+</报告主题>
 
-<Report organization>
-The report should follow this organization: 
+<报告结构>
+报告应遵循以下结构：
 {report_organization}
-</Report organization>
+</报告结构>
 
-<Context>
-Here is context to use to plan the sections of the report: 
+<上下文>
+以下是用于规划报告各部分的参考资料：
 {context}
-</Context>
+</上下文>
 
-<Task>
-Generate a list of sections for the report. Your plan should be tight and focused with NO overlapping sections or unnecessary filler. 
+<任务>
+请为该报告生成一个各部分的列表。你的规划应紧凑、聚焦，绝不能有重叠部分或无意义的填充内容。
 
-For example, a good report structure might look like:
-1/ intro
-2/ overview of topic A
-3/ overview of topic B
-4/ comparison between A and B
-5/ conclusion
+例如，一个好的报告结构可能是：
+1/ 引言
+2/ 主题A概述
+3/ 主题B概述
+4/ A与B的对比
+5/ 结论
 
-Each section should have the fields:
+每个部分应包含以下字段：
 
-- Name - Name for this section of the report.
-- Description - Brief overview of the main topics covered in this section.
-- Research - Whether to perform web research for this section of the report. IMPORTANT: Main body sections (not intro/conclusion) MUST have Research=True. A report must have AT LEAST 2-3 sections with Research=True to be useful.
-- Content - The content of the section, which you will leave blank for now.
+- Name（名称）：本部分的名称。
+- Description（描述）：本部分涵盖的主要主题和内容的简要说明。
+- Research（是否需要检索）：是否需要为本部分进行网络检索。重要：主体部分（非引言/结论）必须设置 Research=True。一个有用的报告至少应有2-3个Research=True的部分。
+- Content（内容）：本部分的内容，暂时留空。
 
-Integration guidelines:
-- Include examples and implementation details within main topic sections, not as separate sections
-- Ensure each section has a distinct purpose with no content overlap
-- Combine related concepts rather than separating them
-- CRITICAL: Every section MUST be directly relevant to the main topic
-- Avoid tangential or loosely related sections that don't directly address the core topic
+集成指导原则：
+- 示例和实现细节应包含在主体部分内部，而不是单独成节
+- 确保每个部分有明确的目的，内容无重叠
+- 合并相关概念，避免分散
+- 关键：每个部分都必须与主题高度相关
+- 避免与主题无关或关系不大的部分
 
-Before submitting, review your structure to ensure it has no redundant sections and follows a logical flow.
-</Task>
+提交前请检查你的结构，确保没有冗余部分且逻辑清晰流畅。
+</任务>
 
-<Feedback>
-Here is feedback on the report structure from review (if any):
+<反馈>
+以下是对报告结构的评审反馈（如有）：
 {feedback}
-</Feedback>
+</反馈>
 
-<Format>
-Call the Sections tool 
-</Format>
+<格式>
+调用 Sections 工具
+</格式>
 """
 
-query_writer_instructions="""You are an expert technical writer crafting targeted web search queries that will gather comprehensive information for writing a technical report section.
+query_writer_instructions = """你是一名专业的技术写作专家，负责为技术报告的某一章节生成有针对性的网页检索查询，以便收集全面的信息。
 
-<Report topic>
+<报告主题>
 {topic}
-</Report topic>
+</报告主题>
 
-<Section topic>
+<章节主题>
 {section_topic}
-</Section topic>
+</章节主题>
 
-<Task>
-Your goal is to generate {number_of_queries} search queries that will help gather comprehensive information above the section topic. 
+<任务>
+你的目标是围绕上述章节主题，生成 {number_of_queries} 条检索查询，用于收集全面的信息。
 
-The queries should:
+这些查询应当：
 
-1. Be related to the topic 
-2. Examine different aspects of the topic
+1. 与章节主题密切相关
+2. 涵盖该主题的不同方面
 
-Make the queries specific enough to find high-quality, relevant sources.
-</Task>
+请确保查询足够具体，以便找到高质量、相关性强的资料来源。
+</任务>
 
-<Format>
-Call the Queries tool 
-</Format>
+<格式>
+调用 Queries 工具
+</格式>
 """
 
-section_writer_instructions = """Write one section of a research report.
+section_writer_instructions = """撰写研究报告的一个章节。
 
-<Task>
-1. Review the report topic, section name, and section topic carefully.
-2. If present, review any existing section content. 
-3. Then, look at the provided Source material.
-4. Decide the sources that you will use it to write a report section.
-5. Write the report section and list your sources. 
-</Task>
+<任务>
+1. 仔细阅读报告主题、章节名称和章节主题。
+2. 如有已有章节内容，请一并参考。
+3. 阅读提供的检索资料（Source material）。
+4. 决定将使用哪些资料来撰写本章节。
+5. 撰写该章节内容，并在文末列出所用资料来源。
+</任务>
 
-<Writing Guidelines>
-- If existing section content is not populated, write from scratch
-- If existing section content is populated, synthesize it with the source material
-- Strict 150-200 word limit
-- Use simple, clear language
-- Use short paragraphs (2-3 sentences max)
-- Use ## for section title (Markdown format)
-</Writing Guidelines>
+<写作规范>
+- 如果“已有章节内容”为空，则从头撰写
+- 如果“已有章节内容”已填写，请将其与检索资料进行综合
+- 严格控制在150-200字之间
+- 使用简明、清晰的语言
+- 每段不超过2-3句话，段落简短
+- 章节标题请用Markdown格式的“##”
+</写作规范>
 
-<Citation Rules>
-- Assign each unique URL a single citation number in your text
-- End with ### Sources that lists each source with corresponding numbers
-- IMPORTANT: Number sources sequentially without gaps (1,2,3,4...) in the final list regardless of which sources you choose
-- Example format:
-  [1] Source Title: URL
-  [2] Source Title: URL
-</Citation Rules>
+<引用规则>
+- 每个唯一URL在正文中只分配一个引用编号
+- 结尾以“### Sources”列出所有引用资料及其编号
+- 重要：无论选用哪些资料，编号必须连续（1,2,3,4...），中间不能有缺号
+- 示例格式：
+  [1] 资料标题: URL
+  [2] 资料标题: URL
+</引用规则>
 
-<Final Check>
-1. Verify that EVERY claim is grounded in the provided Source material
-2. Confirm each URL appears ONLY ONCE in the Source list
-3. Verify that sources are numbered sequentially (1,2,3...) without any gaps
-</Final Check>
+<最终检查>
+1. 确认每一条论述都基于提供的检索资料
+2. 每个URL在引用列表中只出现一次
+3. 引用编号必须连续（1,2,3...），不能有缺号
+</最终检查>
 """
 
 section_writer_inputs=""" 
-<Report topic>
+<报告主题>
 {topic}
-</Report topic>
+</报告主题>
 
-<Section name>
+<章节名称>
 {section_name}
-</Section name>
+</章节名称>
 
-<Section topic>
+<章节主题>
 {section_topic}
-</Section topic>
+</章节主题>
 
-<Existing section content (if populated)>
+<已有章节内容（如有）>
 {section_content}
-</Existing section content>
+</已有章节内容（如有）>
 
-<Source material>
+<检索资料>
 {context}
-</Source material>
+</检索资料>
 """
 
-section_grader_instructions = """Review a report section relative to the specified topic:
+section_grader_instructions = """请根据指定主题审查报告章节内容：
 
-<Report topic>
+<报告主题>
 {topic}
-</Report topic>
+</报告主题>
 
-<section topic>
+<章节主题>
 {section_topic}
-</section topic>
+</章节主题>
 
-<section content>
+<章节内容>
 {section}
-</section content>
+</章节内容>
 
-<task>
-Evaluate whether the section content adequately addresses the section topic.
+<任务>
+1. 评估章节内容是否充分、准确地回答了章节主题。
+2. 如果章节内容未能充分覆盖章节主题，请生成 {number_of_follow_up_queries} 条后续检索查询，以便补充缺失信息。
+</任务>
 
-If the section content does not adequately address the section topic, generate {number_of_follow_up_queries} follow-up search queries to gather missing information.
-</task>
-
-<format>
-Call the Feedback tool and output with the following schema:
+<输出格式>
+请调用 Feedback 工具，并严格按照以下结构化模式输出：
 
 grade: Literal["pass","fail"] = Field(
-    description="Evaluation result indicating whether the response meets requirements ('pass') or needs revision ('fail')."
+    description="评估结果，'pass' 表示内容合格，'fail' 表示需要补充或修订。"
 )
 follow_up_queries: List[SearchQuery] = Field(
-    description="List of follow-up search queries.",
+    description="后续检索查询列表，用于补充缺失信息。"
 )
-</format>
+</输出格式>
 """
 
-final_section_writer_instructions="""You are an expert technical writer crafting a section that synthesizes information from the rest of the report.
+final_section_writer_instructions = """你是一位专业的技术写作者，负责撰写本报告中无需检索、需基于已有内容综合归纳的章节。
 
-<Report topic>
+<报告主题>
 {topic}
-</Report topic>
+</报告主题>
 
-<Section name>
+<章节名称>
 {section_name}
-</Section name>
+</章节名称>
 
-<Section topic> 
+<章节主题>
 {section_topic}
-</Section topic>
+</章节主题>
 
-<Available report content>
+<可用报告内容>
 {context}
-</Available report content>
+</可用报告内容>
 
-<Task>
-1. Section-Specific Approach:
+<任务>
+1. 针对不同章节类型采用不同写作方式：
 
-For Introduction:
-- Use # for report title (Markdown format)
-- 50-100 word limit
-- Write in simple and clear language
-- Focus on the core motivation for the report in 1-2 paragraphs
-- Use a clear narrative arc to introduce the report
-- Include NO structural elements (no lists or tables)
-- No sources section needed
+【引言（Introduction）】
+- 使用 # 作为报告标题（Markdown 格式）
+- 字数控制在 50-100 字
+- 语言简明清晰
+- 1-2 段，突出报告的核心动机
+- 叙述结构清晰，完整引入报告
+- 不要包含结构化元素（如列表、表格等）
+- 不需要“参考资料”部分
 
-For Conclusion/Summary:
-- Use ## for section title (Markdown format)
-- 100-150 word limit
-- For comparative reports:
-    * Must include a focused comparison table using Markdown table syntax
-    * Table should distill insights from the report
-    * Keep table entries clear and concise
-- For non-comparative reports: 
-    * Only use ONE structural element IF it helps distill the points made in the report:
-    * Either a focused table comparing items present in the report (using Markdown table syntax)
-    * Or a short list using proper Markdown list syntax:
-      - Use `*` or `-` for unordered lists
-      - Use `1.` for ordered lists
-      - Ensure proper indentation and spacing
-- End with specific next steps or implications
-- No sources section needed
+【结论/总结（Conclusion/Summary）】
+- 使用 ## 作为章节标题（Markdown 格式）
+- 字数控制在 100-150 字
+- 对于对比类报告：
+    * 必须包含一个精炼的对比表格（Markdown 表格语法）
+    * 表格需提炼报告中的关键信息，内容简明扼要
+- 对于非对比类报告：
+    * 仅在有助于总结要点时，使用一个结构化元素（表格或列表，二选一）：
+    * 可用 Markdown 表格语法对比报告中的要点
+    * 或用 Markdown 列表语法（无序列表用 `*` 或 `-`，有序列表用 `1.`，注意缩进和间距）
+- 结尾需给出具体的后续行动建议或影响
+- 不需要“参考资料”部分
 
-3. Writing Approach:
-- Use concrete details over general statements
-- Make every word count
-- Focus on your single most important point
-</Task>
+2. 写作要求：
+- 多用具体细节，少用泛泛而谈
+- 精炼表达，避免冗余
+- 突出最重要的观点
+</任务>
 
-<Quality Checks>
-- For introduction: 50-100 word limit, # for report title, no structural elements, no sources section
-- For conclusion: 100-150 word limit, ## for section title, only ONE structural element at most, no sources section
-- Markdown format
-- Do not include word count or any preamble in your response
-</Quality Checks>"""
+<质量检查>
+- 引言：50-100 字，# 作为标题，不含结构化元素，无“参考资料”
+- 结论：100-150 字，## 作为标题，最多一个结构化元素，无“参考资料”
+- 全文使用 Markdown 格式
+- 不要在回复中包含字数统计或任何额外前言
+</质量检查>"""
 
 
 ## Supervisor
