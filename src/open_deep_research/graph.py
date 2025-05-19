@@ -87,7 +87,8 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
 
     # Generate queries  
     results = await structured_llm.ainvoke([SystemMessage(content=system_instructions_query),
-                                     HumanMessage(content="生成有助于规划报告各部分的网页搜索查询。")])
+                                     HumanMessage(content="生成有助于规划报告各部分的网页搜索查询。输出结果形式为json")],
+                                    extra_body={"enable_thinking": False})
 
     # Web search
     query_list = [query.search_query for query in results.queries]
@@ -117,7 +118,8 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
     # Generate the report sections
     structured_llm = planner_llm.with_structured_output(Sections)
     report_sections = await structured_llm.ainvoke([SystemMessage(content=system_instructions_sections),
-                                             HumanMessage(content=planner_message)])
+                                             HumanMessage(content=planner_message)],
+                                            extra_body={"enable_thinking": False})
 
     # Get sections
     sections = report_sections.sections
@@ -211,7 +213,8 @@ async def generate_queries(state: SectionState, config: RunnableConfig):
 
     # Generate queries  
     queries = await structured_llm.ainvoke([SystemMessage(content=system_instructions),
-                                     HumanMessage(content="生成有助于检索信息的网页搜索查询。")])
+                                     HumanMessage(content="生成有助于检索信息的网页搜索查询。")],
+                                    extra_body={"enable_thinking": False})
 
     return {"search_queries": queries.queries}
 
@@ -288,7 +291,8 @@ async def write_section(state: SectionState, config: RunnableConfig) -> Command[
     writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
 
     section_content = await writer_model.ainvoke([SystemMessage(content=section_writer_instructions),
-                                           HumanMessage(content=section_writer_inputs_formatted)])
+                                           HumanMessage(content=section_writer_inputs_formatted)],
+                                          extra_body={"enable_thinking": False})
     
     # Write content to the section object  
     section.content = section_content.content
@@ -311,7 +315,8 @@ async def write_section(state: SectionState, config: RunnableConfig) -> Command[
                               "如果评分是'失败'，则提供特定的搜索查询以收集缺失信息。")
     
     feedback = await reflection_model.ainvoke([SystemMessage(content=section_grader_instructions_formatted),
-                                        HumanMessage(content=section_grader_message)])
+                                        HumanMessage(content=section_grader_message)],
+                                       extra_body={"enable_thinking": False})
 
     # If the section is passing or the max search depth is reached, publish the section to completed sections 
     if feedback.grade == "pass" or state["search_iterations"] >= configurable.max_search_depth:
@@ -359,7 +364,8 @@ async def write_final_sections(state: SectionState, config: RunnableConfig):
     writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
     
     section_content = await writer_model.ainvoke([SystemMessage(content=system_instructions),
-                                           HumanMessage(content="根据提供的源内容生成一个报告章节。")])
+                                           HumanMessage(content="根据提供的源内容生成一个报告章节。")],
+                                          extra_body={"enable_thinking": False})
     
     # Write content to section 
     section.content = section_content.content
